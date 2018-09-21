@@ -5,7 +5,7 @@ A repo for a freshman-year (1st year): https://github.com/luckysandra/proga
 
 **№**|**Описание**|**Ссылка на работу**
 ---|:---:|---:
-**1**|"Виселица"|[ссылка](https://github.com/luckysandra/python2018)
+**1**|"Виселица"|[ссылка](https://github.com/luckysandra/python2018/tree/master/homework/homework1)
 **2**|Краулер для газетного корпуса|[сслк](https://github.com/luckysandra/python2018)
 **3**|Феминитивчики|[ыа](https://github.com/luckysandra/python2018)
 
