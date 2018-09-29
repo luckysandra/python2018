@@ -1,11 +1,13 @@
 import collections
 import random
 
+#Функция для открытия файлов
 def opener(filename):
     with open(filename, 'r', encoding="utf-8") as f:
-    text = f.readlines()
+        text = f.readlines()
     return text
 
+#Делаем чистый словарь
 def make_dict(text):
     f = []
     for line in text:
@@ -16,6 +18,7 @@ def make_dict(text):
     text = collections.Counter(f)
     return text
 
+#Из словаря выбираем случайное слово с частотностью > 3
 def randomizer(text):
     f = []
     for keys,value in text.items():
@@ -24,9 +27,9 @@ def randomizer(text):
     return random.choice(f)
 
 def main():
-    text = opener('sem1.py')
+    text = opener('1stsem.txt')
     text = make_dict(text)
-    text = randomizer()
+    text = randomizer(text)
+    print(text)
         
 main()
-
