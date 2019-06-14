@@ -154,7 +154,10 @@ def new_string(word_1, words, str_ing, morphy_class):
             try:
                 new_word = morphy_class.parse(word_1)
                 new_word = new_word[0].inflect(string_gr).word
+                boundary = re.compile(r'\b%s\b' % word)
+                word = re.search(boundary, str_ing).group()
                 if vowels(new_word) == vowels(word):
+                    print(word, ': ', new_word)
                     new_str = str_ing.replace(word, new_word)
                     words.remove(word)
                     words.insert(i, new_word)
@@ -192,9 +195,30 @@ def replacer(word, friends, full_gr, new_str, mor_phy, rus):
     return new_str
 
 
+def dottize(str_in):
+    if str_in[-3] in [';', ',', ':', '-', '—', '\\', '/', '\'']:
+        str_in = str_in[:-3] + '.\n'
+    elif str_in[-3] not in ['.', '!', '?']:
+        str_in = str_in[:-2] + '.\n'
+    return str_in
+
+
 def working_horsie(word_1, morphy_class, mystem_class, rus):
     k = 1
     count = 0
+    wor = re.search(r'\d+', word_1)
+    if wor:
+        return 'Кажется, это какие-то цифры. Я от них не падаю, но грущу. ' \
+               'Дистих не получится...'
+    wor = re.search(r'[а-яё]+\s[а-яё]*', word_1.lower())
+    if wor:
+        return 'Кажется, это словосчетание. Я часто от них ломаюсь, поэтому' \
+                   ' мне запретили их есть. Не получится дистих :('
+    wor = re.search(rus, word_1.lower())
+    try:
+        word_1 = wor.group()
+    except AttributeError:
+        return 'Кажется, это не русские буквы. Я только такие понимаю!'
     while k:
         words, str_ing, num = get_string(rus)
         new_str, new_wd, full_gr, string_gr = new_string(word_1, words,
@@ -225,20 +249,20 @@ def working_horsie(word_1, morphy_class, mystem_class, rus):
                 # all of the above code is supposed to persuade mystem to
                 # change all words in our string to smth else
                 if new_str is not None:
-                    if not new_str.endswith('.'):
-                        new_str = new_str[0:-3] + '.'
-                        k = 0
-                return new_str
+                    new_str = dottize(new_str)
+                    k = 0
+                    return new_str
         except AttributeError:
             pass
         count += 1
         if count > 1076:
             k = 0
-            return 'С этим словом я не смогу сделать дистих :('
+            return 'Это какое-то редкое слово, а я глупенький. ' \
+                   'Дистих не получился :('
 
 
 def main():
-    rus = re.compile('[а-я]+-*[а-я]*')
+    rus = re.compile('[а-яё]+-*[а-яё]*')
     morphy_class = pymorphy2.MorphAnalyzer()
     mystem_class = Mystem()
     if not os.path.exists('lemmatized.txt'):
@@ -255,3 +279,4 @@ if __name__ == '__main__':
     morphy, russian, mystem = main()
     wordie = input('ваше слово: ')
     strin = working_horsie(wordie, morphy, mystem, russian)
+    print(strin)

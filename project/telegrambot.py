@@ -25,9 +25,19 @@ def send_welcome(message):
         bot.send_message(message.chat.id, "Я умею делать "
                                           "из ваших слов элегические дистихи.")
         bot.send_message(message.chat.id, "Введите любое русское слово: ")
+        bot.send_message(message.chat.id, "Информация для проверяющих: я "
+                                          "построен на библиотеке pymorphy, "
+                                          "поэтому у меня специфическое "
+                                          "представление о роде слов, зато "
+                                          "я умею склонять несуществующие "
+                                          "слова! это ли не счастье!")
     except telebot.apihelper.ApiException:
         pass
 
+
+@bot.message_handler(commands=['restart'])
+def remove_message(message):
+    message = None
 
 @bot.message_handler(func=lambda m: True, content_types=['text'])
 def send_distich(message):
@@ -35,12 +45,12 @@ def send_distich(message):
         uncalled for messages. It seems fascinated by cats"""
     strin = code.working_horsie(message.text, morphy,  mystem, rus)
     try:
-        bot.send_message(message.chat.id, strin)
+        bot.reply_to(message, strin)
     except telebot.apihelper.ApiException:
         pass
 
 
-message = None
+message = None  # thank u Dasha Maximova
 
 
 @app.route("/", methods=['GET', 'HEAD'])
@@ -54,7 +64,7 @@ def webhook():
         json_string = flask.request.get_data().decode('utf-8')
         update = telebot.types.Update.de_json(json_string)
         try:
-            bot.process_new_updates([update]) # doesn't work and die when 403
+            bot.process_new_updates([update])
             return ''
         except telebot.apihelper.ApiException:
             flask.abort(403)
