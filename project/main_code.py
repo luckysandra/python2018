@@ -95,11 +95,12 @@ def word2vec_words(model, words, rus):
 
 
 def generate_file(mys_tem, model, rus):
+    """Makes a JSON item as well as a .txt file to read from"""
     with open('elegic_distikhs.txt', 'r', encoding='utf-8') as f:
         text = f.readlines()
     d = {}
     for i, line in enumerate(text):
-        print('generating mystem string: ', i+1)
+        print('generating mystem string: ', i + 1)
         words_tagged = mys_tem(line, mys_tem)
         preliminary = word2vec_words(model, words_tagged, rus)
         if not os.path.exists('lemmatized.txt'):
@@ -165,6 +166,7 @@ def new_string(word_1, words, str_ing, morphy_class):
 
 
 def replacer(word, friends, full_gr, new_str, mor_phy, rus):
+    """ Does some magic with word2vec-ed words """
     new_word = ''
     old_word = ''
     for friend in friends:
@@ -190,7 +192,7 @@ def replacer(word, friends, full_gr, new_str, mor_phy, rus):
     return new_str
 
 
-def working_horsie(word_1, morphy_class, mystem_class, rus):
+def working_horsie(word_1, morphy_class, rus):
     k = 1
     count = 0
     while k:
@@ -200,6 +202,7 @@ def working_horsie(word_1, morphy_class, mystem_class, rus):
         try:
             word = morphy_class.parse(word_1)[0].inflect(string_gr).word
             if word in new_str:
+                # we now have a pymorphied string and can actually go home u kno
                 with open('lemmatized.json', 'r', encoding='utf-8') as f:
                     text = json.load(f)
                 string_1 = text[str(num)]
@@ -216,32 +219,35 @@ def working_horsie(word_1, morphy_class, mystem_class, rus):
                                            new_str, morphy_class, rus)
                     except KeyError:
                         pass
+                # all of the above code is supposed to persuade mystem to
+                # change all words in our string to smth else
                 if new_str is not None:
                     if not new_str.endswith('.'):
                         new_str = new_str[0:-3] + '.'
                         k = 0
-                    return new_str
+                return new_str
         except AttributeError:
             pass
         count += 1
         if count > 1076:
+            k = 0
             return 'С этим словом я не смогу сделать дистих :('
 
 
 def main():
     rus = re.compile('[а-я]+-*[а-я]*')
     morphy_class = pymorphy2.MorphAnalyzer()
-    mystem_class = Mystem()
     if not os.path.exists('lemmatized.txt'):
         print('loaded mystem, checking for model')
         m = checking_for_file()
         print('found model, loading')
         model = load_model(m)
+        mystem_class = Mystem()
         generate_file(mystem_class, model, rus)
-    return mystem_class, morphy_class, rus
+    return morphy_class, rus
 
 
 if __name__ == '__main__':
-    mystem, morphy, russian = main()
+    morphy, russian = main()
     wordie = input('ваше слово: ')
-    string = working_horsie(wordie, morphy, mystem, russian)
+    string = working_horsie(wordie, morphy, russian)
