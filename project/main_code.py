@@ -220,7 +220,7 @@ def working_horsie(word_1, morphy_class, mystem_class, rus):
                                                new_str, morphy_class, rus)
                         except KeyError:
                             pass
-                    except TypeError:
+                    except TypeError or RuntimeError:
                         pass
                 # all of the above code is supposed to persuade mystem to
                 # change all words in our string to smth else

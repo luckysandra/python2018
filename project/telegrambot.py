@@ -40,6 +40,9 @@ def send_distich(message):
         pass
 
 
+message = None
+
+
 @app.route("/", methods=['GET', 'HEAD'])
 def index():
     return 'ok'
