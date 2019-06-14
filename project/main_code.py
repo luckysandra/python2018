@@ -6,36 +6,46 @@ import random
 import re
 import gensim
 import requests
-import logging
-logging.basicConfig(filename="sample.log", level=logging.INFO)
 
 
 def download_file(url):
     """ Downloads the binary from RusVectores """
     # code partially taken from StackOverflow
     filename = url.split('/')[-1]
-    file = requests(url, allow_redirects=True)
+    file = requests.get(url, allow_redirects=True)
     with open(filename, 'wb') as f:
         f.write(file.content)
     return filename
 
 
-# Searching the directory for a bin.gz binary
 def checking_for_file():
+    """ Searches the directory for a bin.gz or vec.gz """
     directory = os.listdir(os.getcwd())
     for i in directory:
         if i.endswith('vec.gz') or i.endswith('bin.gz'):
             return i
     # I'm using this binary as it's the last mystem-based one
-    m = download_file("http://rusvectores.org/static/models/"
-                      "rusvectores2/ruscorpora_mystem_cbow_300_2_2015.bin.gz")
-    return m
+    file = download_file("http://rusvectores.org/static/models/rusvectores2/"
+                         "ruscorpora_mystem_cbow_300_2_2015.bin.gz")
+    return file
 
 
-def my_stem(string):
+def load_model(file):
+    """ Preloads the Word2Vec model"""
+    if file.endswith('bin.gz'):
+        return gensim.models.KeyedVectors.load_word2vec_format(m,
+                                                               binary=True)
+    elif file.endswith('vec.gz'):
+        return gensim.models.KeyedVectors.load_word2vec_format(m,
+                                                               binary=False)
+    else:
+        print('Unable to read vector space')
+        return None
+
+
+def my_stem(str_ing, mys_tem):
     """ Receives the string, returns it's tagsets and lemmas """
-    mystm = Mystem()
-    string_gr = json.dumps(mystm.analyze(string), ensure_ascii=False)
+    string_gr = json.dumps(mys_tem.analyze(str_ing), ensure_ascii=False)
     string_gr = json.loads(string_gr)
     words_tagged = []
     for i in string_gr:
@@ -48,134 +58,190 @@ def my_stem(string):
     return words_tagged
 
 
-# Searches a corpus and finds random lines
-def get_string():
-    """ Takes two random strings from a file,
-    returns words from it and the string itself """
-    with open('elegic_distikhs.txt', 'r', encoding='utf-8') as f:
-        text = f.readlines()
-    n = random.randint(0, len(text)-2)
-    string = text[n] + text[n+1]
-    words = []
-    for word in string.lower().split():
-        wordie = re.search('[а-я]+-*[а-я]*', word)
-        if wordie:
-            words.append(wordie.group())
-    return words, string
-
-
-# Takes a string and returns its vowel count
-def vowels(string):
+def vowels(str_ing):
     """ Takes a string and returns its number of syllables """
     vowel_list = ('а', 'е', 'ё', 'и', 'о', 'у', 'ы', 'э', 'ю', 'я')
     k = 0
-    for char in string:
+    for char in str_ing:
         if char in vowel_list:
             k += 1
     return k
 
 
-# Puts the word into the string
-def new_string(wordie, words, string, morphy):
-    """ Takes a string and puts the word in it """
-    new_str = ''
-    string_gr = frozenset()
-    full_gr = {}
-    new_word = ''
-    pos = re.search('[а-я]+-*[а-я]*', wordie)
-    if pos:
-        pos = morphy.parse(pos.group())[0].tag.POS
-    for i, word in enumerate(words):
-        tag = morphy.parse(word)[0].tag
-        if pos == tag.POS:
-            gramm = str(morphy.parse(word)[0].tag)
-            gramm = gramm.replace(',', ' ').split(' ')
-            grammems = []
-            for item in gramm:
-                if morphy.parse(wordie)[0].inflect({item}) is not None:
-                    grammems.append(item)  # only the 'good' tags
-            string_gr = frozenset(tuple(grammems))
-            try:
-                new_word = morphy.parse(wordie)[0].inflect(string_gr).word
-                if vowels(new_word) == vowels(word):
-                    new_str = string.replace(word, new_word)
-                    words.remove(word)
-                    words.insert(i, new_word)
-                    word = new_word
-            except AttributeError:
-                pass
-        full_gr[word] = frozenset(tuple(str(tag).replace(',', ' ').split(' ')))
-    return new_str, new_word, full_gr, string_gr
-
-
-def load_model(m):
-    if m.endswith('bin.gz'):
-        return gensim.models.KeyedVectors.load_word2vec_format(m,
-                                                               binary=True)
-    elif m.endswith('vec.gz'):
-        return gensim.models.KeyedVectors.load_word2vec_format(m,
-                                                               binary=False)
-    else:
-        print('Unable to read vector space')
-        return None
-
-
-def word2vec_words(model, words):
+def word2vec_words(model, words, rus):
     """ Takes a model, a list of words and the input
     and turns it into a new string with different words"""
-    wordies = []
+    preliminary = {}
     for word in words:
-        clean_word = re.search('[а-я]+', word).group()
+        clean_word = re.search(rus, word).group()
         if word in model:
-            for item in model.most_similar(positive=word, topn=10):
+            wordies = []
+            for item in model.most_similar(positive=word, topn=100):
                 ending = re.search('_[A-Z]+', word).group()
-                it = re.search('[а-я]+', item[0])
+                it = re.search(rus, item[0])
                 try:
                     it = it.group()
                 except AttributeError:
                     break
                 if item[0].endswith(ending) and \
                         vowels(it) == vowels(clean_word):
-                    wordies.append((clean_word, it))
-    return wordies
+                    wordies.append(it)
+            word = re.search(rus, word).group()
+            preliminary[word] = wordies
+        else:
+            word = re.search(rus, word).group()
+            preliminary[word] = []
+    return preliminary
 
 
-def working_horsie(wordie):
-    m = checking_for_file()
-    model = load_model(m)
-    morphy = pymorphy2.MorphAnalyzer()
+def generate_file(mys_tem, model, rus):
+    with open('elegic_distikhs.txt', 'r', encoding='utf-8') as f:
+        text = f.readlines()
+    d = {}
+    for i, line in enumerate(text):
+        print('generating mystem string: ', i+1)
+        words_tagged = mys_tem(line, mys_tem)
+        preliminary = word2vec_words(model, words_tagged, rus)
+        if not os.path.exists('lemmatized.txt'):
+            with open('lemmatized.txt', 'w', encoding='utf-8') as f:
+                f.write(str(preliminary))
+                f.write('\n')
+        else:
+            with open('lemmatized.txt', 'a', encoding='utf-8') as f:
+                f.write(str(preliminary))
+                f.write('\n')
+        d[i] = preliminary
+    if not os.path.exists('lemmatized.json'):
+        f = open('lemmatized.json', 'w', encoding='utf-8')
+        json.dump(d, f, ensure_ascii=False, indent=4)
+
+
+def get_string(rus):
+    """ Takes two random strings from a file,
+    returns words from it and the string itself """
+    with open('elegic_distikhs.txt', 'r', encoding='utf-8') as f:
+        text = f.readlines()
+    n = random.randint(0, len(text) - 2)
+    str_ing = text[n] + text[n + 1]
+    words = []
+    for word in str_ing.lower().split():
+        word_1 = re.search(rus, word)
+        if word_1:
+            words.append(word_1.group())
+    return words, str_ing, n
+
+
+def new_string(word_1, words, str_ing, morphy_class):
+    """ Takes a string and puts the word in it """
+    new_str = ''
+    string_gr = frozenset()
+    full_gr = {}
+    new_word = ''
+    pos = re.search('[а-я]+-*[а-я]*', word_1.lower())
+    if pos:
+        pos = morphy_class.parse(pos.group())[0].tag.POS
+    for i, word in enumerate(words):
+        tag = morphy_class.parse(word)[0].tag
+        if pos == tag.POS:
+            gramm = str(morphy_class.parse(word)[0].tag)
+            gramm = gramm.replace(',', ' ').split(' ')
+            grammems = []
+            for item in gramm:
+                if morphy_class.parse(word_1)[0].inflect({item}) is not None:
+                    grammems.append(item)  # only the good tags
+            string_gr = frozenset(tuple(grammems))
+            try:
+                new_word = morphy_class.parse(word_1)
+                new_word = new_word[0].inflect(string_gr).word
+                if vowels(new_word) == vowels(word):
+                    new_str = str_ing.replace(word, new_word)
+                    words.remove(word)
+                    words.insert(i, new_word)
+                    word = new_word
+            except AttributeError:
+                pass
+            full_gr[word] = frozenset(tuple(str(tag).replace(',', ' ').split(' ')))
+    return new_str, new_word, full_gr, string_gr
+
+
+def replacer(word, friends, full_gr, new_str, mor_phy, rus):
+    new_word = ''
+    old_word = ''
+    for friend in friends:
+        if word in full_gr:
+            gr_info = full_gr[word]
+            old_word = mor_phy.parse(word)[0].inflect(gr_info)
+            friend = re.search(rus, friend)
+            if friend:
+                friend = friend.group()
+                new_word = mor_phy.parse(friend)[0].inflect(gr_info)
+        try:
+            new_word = new_word.word
+        except AttributeError:
+            new_word = None
+        try:
+            old_word = old_word.word
+        except AttributeError:
+            old_word = None
+        if new_word is not None and old_word is not None and \
+                vowels(old_word) == vowels(new_word) \
+                and old_word != new_word:
+            new_str = new_str.replace(old_word, new_word)
+    return new_str
+
+
+def working_horsie(word_1, morphy_class, mystem_class, rus):
     k = 1
     count = 0
     while k:
-        words, string = get_string()
-        new_str, new_wd, full_gr, string_gr = new_string(wordie, words,
-                                                         string, morphy)
-        if morphy.parse(wordie)[0].inflect(string_gr).word in new_str:
-            words_tagged = my_stem(new_str.lower())
-            wordies = word2vec_words(model, words_tagged)
-            for item in wordies:
-                if item[0] in full_gr:
-                    gr_info = full_gr[item[0]]
-                    old_word = morphy.parse(item[0])[0].inflect(gr_info)
-                    new_word = morphy.parse(item[1])[0].inflect(gr_info)
+        words, str_ing, num = get_string(rus)
+        new_str, new_wd, full_gr, string_gr = new_string(word_1, words,
+                                                         str_ing, morphy_class)
+        try:
+            word = morphy_class.parse(word_1)[0].inflect(string_gr).word
+            if word in new_str:
+                with open('lemmatized.json', 'r', encoding='utf-8') as f:
+                    text = json.load(f)
+                string_1 = text[str(num)]
+                string_2 = text[str(num + 1)]
+                for item in words:
+                    item = mystem_class.lemmatize(item)[0]
                     try:
-                        new_word = new_word.word
-                        old_word = new_word.word
-                    except AttributeError:
-                        new_word = None
-                    if new_word is not None and old_word is not None and \
-                            vowels(old_word) == vowels(new_word)\
-                            and old_word != new_wd:
-                        new_str = new_str.replace(old_word, new_word)
-            if not new_str.endswith('.'):
-                new_str = new_str.replace(new_str[-3:-2], '.')
-                return new_str
-            k = 0
+                        new_str = replacer(item, string_1[item], full_gr,
+                                           new_str, morphy_class, rus)
+                    except KeyError:
+                        pass
+                    try:
+                        new_str = replacer(item, string_2[item], full_gr,
+                                           new_str, morphy_class, rus)
+                    except KeyError:
+                        pass
+                if new_str is not None:
+                    if not new_str.endswith('.'):
+                        new_str = new_str[0:-3] + '.'
+                        k = 0
+                    return new_str
+        except AttributeError:
+            pass
         count += 1
         if count > 1076:
             return 'С этим словом я не смогу сделать дистих :('
 
 
+def main():
+    rus = re.compile('[а-я]+-*[а-я]*')
+    morphy_class = pymorphy2.MorphAnalyzer()
+    mystem_class = Mystem()
+    if not os.path.exists('lemmatized.txt'):
+        print('loaded mystem, checking for model')
+        m = checking_for_file()
+        print('found model, loading')
+        model = load_model(m)
+        generate_file(mystem_class, model, rus)
+    return mystem_class, morphy_class, rus
+
+
 if __name__ == '__main__':
-    word = input('Ваше слово: ')
-    string = working_horsie(word)
+    mystem, morphy, russian = main()
+    wordie = input('ваше слово: ')
+    string = working_horsie(wordie, morphy, mystem, russian)

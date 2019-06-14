@@ -9,18 +9,21 @@ bot = telebot.TeleBot(TOKEN, threaded=False)
 bot.remove_webhook()
 bot.set_webhook(url="https://elegic-distich.herokuapp.com/bot")
 app = flask.Flask(__name__)
+mystem, morphy, rus = code.main()
 
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
     bot.send_message(message.chat.id, "Я умею делать "
-                                      "из ваших слов элегические дистихи")
+                                      "из ваших слов элегические дистихи.")
     bot.send_message(message.chat.id, "Введите любое русское слово: ")
 
 
-@bot.message_handler(func=lambda m: True)
+@bot.message_handler(func=lambda m: True, content_types=['text'])
 def send_distich(message):
-    bot.send_message(message.chat.id, code.working_horsie(message.text))
+    bot.send_message(message.chat.id, code.working_horsie(message.text,
+                                                          morphy, mystem,
+                                                          rus))
 
 
 @app.route("/", methods=['GET', 'HEAD'])
