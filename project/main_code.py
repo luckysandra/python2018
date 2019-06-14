@@ -25,9 +25,9 @@ def checking_for_file():
         if i.endswith('vec.gz') or i.endswith('bin.gz'):
             return i
     # I'm using this binary as it's the last mystem-based one
-    file = download_file("http://rusvectores.org/static/models/rusvectores2/"
-                         "ruscorpora_mystem_cbow_300_2_2015.bin.gz")
-    return file
+    fi = download_file("http://rusvectores.org/static/models/rusvectores2/"
+                       "ruscorpora_mystem_cbow_300_2_2015.bin.gz")
+    return fi
 
 
 def load_model(file):
@@ -192,7 +192,7 @@ def replacer(word, friends, full_gr, new_str, mor_phy, rus):
     return new_str
 
 
-def working_horsie(word_1, morphy_class, rus):
+def working_horsie(word_1, morphy_class, mystem_class, rus):
     k = 1
     count = 0
     while k:
@@ -208,16 +208,19 @@ def working_horsie(word_1, morphy_class, rus):
                 string_1 = text[str(num)]
                 string_2 = text[str(num + 1)]
                 for item in words:
-                    item = mystem_class.lemmatize(item)[0]
                     try:
-                        new_str = replacer(item, string_1[item], full_gr,
-                                           new_str, morphy_class, rus)
-                    except KeyError:
-                        pass
-                    try:
-                        new_str = replacer(item, string_2[item], full_gr,
-                                           new_str, morphy_class, rus)
-                    except KeyError:
+                        item = mystem_class.lemmatize(item)[0]
+                        try:
+                            new_str = replacer(item, string_1[item], full_gr,
+                                               new_str, morphy_class, rus)
+                        except KeyError:
+                            pass
+                        try:
+                            new_str = replacer(item, string_2[item], full_gr,
+                                               new_str, morphy_class, rus)
+                        except KeyError:
+                            pass
+                    except TypeError:
                         pass
                 # all of the above code is supposed to persuade mystem to
                 # change all words in our string to smth else
@@ -237,6 +240,7 @@ def working_horsie(word_1, morphy_class, rus):
 def main():
     rus = re.compile('[а-я]+-*[а-я]*')
     morphy_class = pymorphy2.MorphAnalyzer()
+    mystem_class = Mystem()
     if not os.path.exists('lemmatized.txt'):
         print('loaded mystem, checking for model')
         m = checking_for_file()
@@ -244,10 +248,10 @@ def main():
         model = load_model(m)
         mystem_class = Mystem()
         generate_file(mystem_class, model, rus)
-    return morphy_class, rus
+    return morphy_class, rus, mystem_class
 
 
 if __name__ == '__main__':
-    morphy, russian = main()
+    morphy, russian, mystem = main()
     wordie = input('ваше слово: ')
-    string = working_horsie(wordie, morphy, russian)
+    strin = working_horsie(wordie, morphy, mystem, russian)

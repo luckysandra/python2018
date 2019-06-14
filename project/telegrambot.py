@@ -7,7 +7,6 @@ import pymorphy2
 import re
 
 TOKEN = os.environ["TOKEN"]
-WEBHOOK_URL_PATH = "/{}/".format(TOKEN)
 telebot.apihelper.proxy = {'https': 'socks5h://geek:socks@t.geekclass.ru:7777'}
 bot = telebot.TeleBot(TOKEN, threaded=False)
 bot.remove_webhook()
@@ -34,9 +33,9 @@ def send_welcome(message):
 def send_distich(message):
     """ Worked but now doesn't work. And when it did, it sent a lot of
         uncalled for messages. It seems fascinated by cats"""
-    string = code.working_horsie(message.text, morphy, rus)
+    strin = code.working_horsie(message.text, morphy,  mystem, rus)
     try:
-        bot.send_message(message.chat.id, string)
+        bot.send_message(message.chat.id, strin)
     except telebot.apihelper.ApiException:
         pass
 
@@ -46,13 +45,16 @@ def index():
     return 'ok'
 
 
-@app.route(WEBHOOK_URL_PATH, methods=['POST'])
+@app.route("/bot", methods=['POST'])
 def webhook():
     if flask.request.headers.get('content-type') == 'application/json':
         json_string = flask.request.get_data().decode('utf-8')
         update = telebot.types.Update.de_json(json_string)
-        bot.process_new_updates([update])
-        return ''
+        try:
+            bot.process_new_updates([update]) # doesn't work and die when 403
+            return ''
+        except telebot.apihelper.ApiException:
+            flask.abort(403)
     else:
         flask.abort(403)
 
