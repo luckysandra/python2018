@@ -7,50 +7,49 @@ import pymorphy2
 import re
 
 TOKEN = os.environ["TOKEN"]
-telebot.apihelper.proxy = {'https': 'socks5h://geek:socks@t.geekclass.ru:7777'}
+telebot.apihelper.proxy = {'https': 'socks5h'
+                                    '://geek:socks@t.geekclass.ru:7777'}
 bot = telebot.TeleBot(TOKEN, threaded=False)
-bot.remove_webhook()
-bot.set_webhook(url="https://elegic-distich.herokuapp.com/bot")
-app = flask.Flask(__name__)
 mystem = Mystem()
 morphy = pymorphy2.MorphAnalyzer()
 rus = re.compile('[а-я]+-*[а-я]*')
+bot.remove_webhook()
+bot.set_webhook(url="https://elegic-distich.herokuapp.com/bot")
+app = flask.Flask(__name__)
 
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
-    """ Worked but now doesn't work. And when it did, it sent a lot of
-    uncalled for messages"""
-    try:
-        bot.send_message(message.chat.id, "Я умею делать "
-                                          "из ваших слов элегические дистихи.")
-        bot.send_message(message.chat.id, "Введите любое русское слово: ")
-        bot.send_message(message.chat.id, "Информация для проверяющих: я "
-                                          "построен на библиотеке pymorphy, "
-                                          "поэтому у меня специфическое "
-                                          "представление о роде слов, зато "
-                                          "я умею склонять несуществующие "
-                                          "слова! это ли не счастье!")
-    except telebot.apihelper.ApiException:
-        pass
+    """ Sends a welcome message to chat. """
+    bot.send_message(message.chat.id, "Я умею делать "
+                                      "из ваших слов элегические дистихи.")
+    bot.send_message(message.chat.id, "Введите любое русское слово: ")
+    bot.send_message(message.chat.id, "Информация для проверяющих: я "
+                                      "построен на библиотеке pymorphy, "
+                                      "поэтому у меня специфическое "
+                                      "представление о склонении, зато "
+                                      "я умею склонять несуществующие "
+                                      "слова! это ли не счастье!")
 
 
-@bot.message_handler(commands=['restart'])
-def remove_message(message):
-    message = None
-
-@bot.message_handler(func=lambda m: True, content_types=['text'])
+@bot.message_handler(content_types=['text'])
 def send_distich(message):
-    """ Worked but now doesn't work. And when it did, it sent a lot of
-        uncalled for messages. It seems fascinated by cats"""
-    strin = code.working_horsie(message.text, morphy,  mystem, rus)
-    try:
-        bot.reply_to(message, strin)
-    except telebot.apihelper.ApiException:
-        pass
+    """ It seemed fascinated by cats. So I added a check for num of
+    pending updates. Now works as well as the main code """
+    bot.send_message(message.chat.id, 'Обрабатываю слово %s. Говорю это '
+                                      'потому, что иногда я очень долго '
+                                      'генерирую для вас дистих! не беспоко'
+                                      'йтесь, всё в процессе!' % message.text)
+    strin = code.working_horsie(message.text, morphy, mystem, rus)
+    bot.reply_to(message, strin)
 
 
-message = None  # thank u Dasha Maximova
+@bot.message_handler(func=lambda m: True,
+                     content_types=['audio, document, sticker, photo, video'])
+def send_question(message):
+    """ Replies to the message if anything but text was sent """
+    bot.reply_to(message, 'По-моему, это не слово. Картинки, голосовые и так'
+                          'далее я пока не читаю :(')
 
 
 @app.route("/", methods=['GET', 'HEAD'])
@@ -63,11 +62,20 @@ def webhook():
     if flask.request.headers.get('content-type') == 'application/json':
         json_string = flask.request.get_data().decode('utf-8')
         update = telebot.types.Update.de_json(json_string)
+        # written with help from Ivan Torubarov
         try:
-            bot.process_new_updates([update])
-            return ''
-        except telebot.apihelper.ApiException:
-            flask.abort(403)
+            webhook_info = bot.get_webhook_info()
+            if webhook_info.pending_update_count > 1:  # Vanya u r a godsend
+                print('Evaded unwanted updates: ',
+                      str(webhook_info.pending_update_count))
+                return ''
+            else:
+                print('Updating')
+                bot.process_new_updates([update])
+        except Exception as e:
+            print('%s occured' % str(e))
+            pass
+        return ''
     else:
         flask.abort(403)
 

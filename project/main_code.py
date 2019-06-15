@@ -154,14 +154,16 @@ def new_string(word_1, words, str_ing, morphy_class):
             try:
                 new_word = morphy_class.parse(word_1)
                 new_word = new_word[0].inflect(string_gr).word
-                boundary = re.compile(r'\b%s\b' % word)
-                word = re.search(boundary, str_ing).group()
                 if vowels(new_word) == vowels(word):
-                    print(word, ': ', new_word)
-                    new_str = str_ing.replace(word, new_word)
-                    words.remove(word)
-                    words.insert(i, new_word)
-                    word = new_word
+                    boundary = re.compile(r'[а-яА-ЯёЁ]+\B%s\B[а-яА-ЯЁё]+' % word)
+                    check = re.search(boundary, str_ing)
+                    if check:
+                        pass
+                    else:
+                        new_str = str_ing.replace(word, new_word)
+                        words.remove(word)
+                        words.insert(i, new_word)
+                        word = new_word
             except AttributeError:
                 pass
             full_gr[word] = frozenset(tuple(str(tag).replace(',', ' ').split(' ')))
@@ -212,7 +214,7 @@ def working_horsie(word_1, morphy_class, mystem_class, rus):
                'Дистих не получится...'
     wor = re.search(r'[а-яё]+\s[а-яё]*', word_1.lower())
     if wor:
-        return 'Кажется, это словосчетание. Я часто от них ломаюсь, поэтому' \
+        return 'Кажется, это словосочетание. Я часто от них ломаюсь, поэтому' \
                    ' мне запретили их есть. Не получится дистих :('
     wor = re.search(rus, word_1.lower())
     try:
@@ -257,8 +259,8 @@ def working_horsie(word_1, morphy_class, mystem_class, rus):
         count += 1
         if count > 1076:
             k = 0
-            return 'Это какое-то редкое слово, а я глупенький. ' \
-                   'Дистих не получился :('
+            return 'То ли это какое-то редкое слово, то ли я глупенький. ' \
+                   'Я очень старался, но дистих не получился :('
 
 
 def main():
