@@ -26,10 +26,7 @@ def send_welcome(message):
     bot.send_message(message.chat.id, "Введите любое русское слово: ")
     bot.send_message(message.chat.id, "Информация для проверяющих: я "
                                       "построен на библиотеке pymorphy, "
-                                      "поэтому у меня специфическое "
-                                      "представление о склонении, зато "
-                                      "я умею склонять несуществующие "
-                                      "слова! это ли не счастье!")
+                                      "поэтому я специфически паршу слова.")
 
 
 @bot.message_handler(content_types=['text'])
@@ -42,14 +39,6 @@ def send_distich(message):
                                       'йтесь, всё в процессе!' % message.text)
     strin = code.working_horsie(message.text, morphy, mystem, rus)
     bot.reply_to(message, strin)
-
-
-@bot.message_handler(func=lambda m: True,
-                     content_types=['audio, document, sticker, photo, video'])
-def send_question(message):
-    """ Replies to the message if anything but text was sent """
-    bot.reply_to(message, 'По-моему, это не слово. Картинки, голосовые и так'
-                          'далее я пока не читаю :(')
 
 
 @app.route("/", methods=['GET', 'HEAD'])
@@ -66,11 +55,11 @@ def webhook():
         try:
             webhook_info = bot.get_webhook_info()
             if webhook_info.pending_update_count > 1:  # Vanya u r a godsend
-                print('Evaded unwanted updates: ',
+                print('Unwanted updates stopped: ',
                       str(webhook_info.pending_update_count))
                 return ''
             else:
-                print('Updating')
+                print('Processing new update')
                 bot.process_new_updates([update])
         except Exception as e:
             print('%s occured' % str(e))

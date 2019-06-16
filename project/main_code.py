@@ -166,7 +166,8 @@ def new_string(word_1, words, str_ing, morphy_class):
                         word = new_word
             except AttributeError:
                 pass
-            full_gr[word] = frozenset(tuple(str(tag).replace(',', ' ').split(' ')))
+            full_gr[word] = frozenset(tuple(str(tag).replace(',', ' ').
+                                            split(' ')))
     return new_str, new_word, full_gr, string_gr
 
 
@@ -208,27 +209,34 @@ def dottize(str_in):
 def working_horsie(word_1, morphy_class, mystem_class, rus):
     k = 1
     count = 0
-    wor = re.search(r'\d+', word_1)
-    if wor:
-        return 'Кажется, это какие-то цифры. Я от них не падаю, но грущу. ' \
-               'Дистих не получится...'
-    wor = re.search(r'[а-яё]+\s[а-яё]*', word_1.lower())
-    if wor:
-        return 'Кажется, это словосочетание. Я часто от них ломаюсь, поэтому' \
-                   ' мне запретили их есть. Не получится дистих :('
-    wor = re.search(rus, word_1.lower())
     try:
-        word_1 = wor.group()
+        word_1 = word_1.lower()  # проверяет, всё ли буквы
+    except AttributeError:
+        return 'Странные у вас символы, я с такими не дружу...'
+    wor = re.search(r'\d+', word_1)  # должно ловить цифры в слове
+    if wor:
+        return 'Кажется, это какие-то цифры. Дистих не получится...'
+    wor = re.search(r'[а-яё]+\s[а-яё]*', word_1.lower())  # словосочетания
+    if wor:
+        return 'Кажется, это словосочетание. Я часто от них ломаюсь, ' \
+                'поэтому мне запретили их есть. Не получится дистих :('
+    wor = re.search(rus, word_1.lower())  # проверяет русскость
+    try:
+        wor = wor.group()
     except AttributeError:
         return 'Кажется, это не русские буквы. Я только такие понимаю!'
+    if word_1 != wor:  # не реагирует на запросы типа ?слово
+        return 'Кажется, в Вашем запросе есть посторонние символы. ' \
+               'Не видать нам шедевров нового Гандлевского :('
+    # основной код
     while k:
-        words, str_ing, num = get_string(rus)
+        words, str_ing, num = get_string(rus)  # рандомная строка из корпуса
         new_str, new_wd, full_gr, string_gr = new_string(word_1, words,
                                                          str_ing, morphy_class)
         try:
             word = morphy_class.parse(word_1)[0].inflect(string_gr).word
             if word in new_str:
-                # we now have a pymorphied string and can actually go home u kno
+                # we now have a good string and can actually go home u kno
                 with open('lemmatized.json', 'r', encoding='utf-8') as f:
                     text = json.load(f)
                 string_1 = text[str(num)]
@@ -258,13 +266,12 @@ def working_horsie(word_1, morphy_class, mystem_class, rus):
             pass
         count += 1
         if count > 1076:
-            k = 0
             return 'То ли это какое-то редкое слово, то ли я глупенький. ' \
                    'Я очень старался, но дистих не получился :('
 
 
 def main():
-    rus = re.compile('[а-яё]+-*[а-яё]*')
+    rus = re.compile(r'\b[а-я]+-*[а-я]*\b')
     morphy_class = pymorphy2.MorphAnalyzer()
     mystem_class = Mystem()
     if not os.path.exists('lemmatized.txt'):
@@ -279,6 +286,6 @@ def main():
 
 if __name__ == '__main__':
     morphy, russian, mystem = main()
-    wordie = input('ваше слово: ')
+    wordie = 'так'
     strin = working_horsie(wordie, morphy, mystem, russian)
     print(strin)
