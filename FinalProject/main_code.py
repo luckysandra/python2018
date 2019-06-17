@@ -216,25 +216,23 @@ def working_horsie(word_1, morphy_class, mystem_class, rus):
         word_1 = word_1.lower()  # проверяет, всё ли буквы
     except AttributeError:
         return 'Странные у вас символы, я с такими не дружу...'
+    if re.search('ё', word_1):
+        word_1 = word_1.replace('ё', 'е')  # почему-то пайморфи не любит ё
     wor = re.search(r'\d+', word_1)  # должно ловить цифры в слове
     if wor:
         return 'Кажется, это какие-то цифры. Дистих не получится...'
     wor = re.search(r'[а-яё]+\s[а-яё]*', word_1.lower())  # словосочетания
     if wor:
         return 'Кажется, это словосочетание. Я часто от них ломаюсь, ' \
-                'поэтому мне запретили их есть. Не получится дистих :('
+               'поэтому мне запретили их есть. Не получится дистих :('
     wor = re.search(rus, word_1.lower())  # проверяет русскость
     try:
         wor = wor.group()
     except AttributeError:
         return 'Кажется, это не русские буквы. Я только такие понимаю!'
     if word_1 != wor:  # не реагирует на запросы типа ?слово
-        return 'Кажется, в Вашем запросе есть посторонние символы. ' \
-               'Не видать нам шедевров нового Гандлевского :('
+        return 'Слово %s не соответствует слову %s' % (word_1, wor)
     # основной код
-    if re.search('ё', word_1):
-        word_1 = word_1.replace('ё', 'е')  # почему-то пайморфи не любит ё
-        print(word_1)
     while k:
         words, str_ing, num = get_string(rus)  # рандомная строка из корпуса
         new_str, new_wd, full_gr, string_gr = new_string(word_1, words,
@@ -292,6 +290,6 @@ def main():
 
 if __name__ == '__main__':
     morphy, russian, mystem = main()
-    wordie = input('ваше слово: ')
+    word_1 = input('ваше слово: ')
     strin = working_horsie(wordie, morphy, mystem, russian)
     print(strin)
