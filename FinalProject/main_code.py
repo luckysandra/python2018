@@ -124,6 +124,7 @@ def get_string(rus):
         text = f.readlines()
     n = random.randint(0, len(text) - 2)
     str_ing = text[n] + text[n + 1]
+    n = 1
     words = []
     for word in str_ing.lower().split():
         word_1 = re.search(rus, word)
@@ -155,7 +156,9 @@ def new_string(word_1, words, str_ing, morphy_class):
                 new_word = morphy_class.parse(word_1)
                 new_word = new_word[0].inflect(string_gr).word
                 if vowels(new_word) == vowels(word):
-                    boundary = re.compile(r'[а-яА-ЯёЁ]+\B%s\B[а-яА-ЯЁё]+' % word)
+                    # trying to do a boundary check
+                    boundary = re.compile(r'[а-яА-ЯёЁ]+\B%s\B[а-яА-ЯЁё]+' %
+                                          word)
                     check = re.search(boundary, str_ing)
                     if check:
                         pass
@@ -229,6 +232,9 @@ def working_horsie(word_1, morphy_class, mystem_class, rus):
         return 'Кажется, в Вашем запросе есть посторонние символы. ' \
                'Не видать нам шедевров нового Гандлевского :('
     # основной код
+    if re.search('ё', word_1):
+        word_1 = word_1.replace('ё', 'е')  # почему-то пайморфи не любит ё
+        print(word_1)
     while k:
         words, str_ing, num = get_string(rus)  # рандомная строка из корпуса
         new_str, new_wd, full_gr, string_gr = new_string(word_1, words,
@@ -271,7 +277,7 @@ def working_horsie(word_1, morphy_class, mystem_class, rus):
 
 
 def main():
-    rus = re.compile(r'\b[а-я]+-*[а-я]*\b')
+    rus = re.compile(r'\b[а-яё]+-*[а-яё]*\b')
     morphy_class = pymorphy2.MorphAnalyzer()
     mystem_class = Mystem()
     if not os.path.exists('lemmatized.txt'):
@@ -286,6 +292,6 @@ def main():
 
 if __name__ == '__main__':
     morphy, russian, mystem = main()
-    wordie = 'так'
+    wordie = input('ваше слово: ')
     strin = working_horsie(wordie, morphy, mystem, russian)
     print(strin)
